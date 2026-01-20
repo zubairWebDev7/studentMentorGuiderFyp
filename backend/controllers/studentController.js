@@ -142,3 +142,95 @@ console.log("rge messages between them", messages);
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+export const recentChats = async (req, res) => {
+  try {
+    const studentId = req.user.id;
+
+    if (!studentId) {
+      return res.status(400).json({ message: "Student ID missing" });
+    }
+
+    // 1️⃣ Get all conversations for student
+    const conversations = await Conversation.find({
+      participants: studentId,
+    });
+
+    const mentorMap = new Map(); // mentorId -> { mentor, latestMessage }
+
+    for (const convo of conversations) {
+      // 2️⃣ Identify mentor
+      const mentorId = convo.participants.find(
+        (id) => id.toString() !== studentId.toString()
+      );
+
+      if (!mentorId) continue;
+
+      // 3️⃣ Get latest message for THIS conversation
+      const message = await Message.findOne({ conversationId: convo._id })
+        .sort({ createdAt: -1 })
+        .lean();
+
+      // If no message, skip (or keep empty based on preference)
+      if (!message) continue;
+
+      // 4️⃣ If mentor already exists, keep the most recent message
+      const existing = mentorMap.get(mentorId.toString());
+
+      if (
+        !existing ||
+        new Date(message.createdAt) > new Date(existing.latestMessage.createdAt)
+      ) {
+        mentorMap.set(mentorId.toString(), {
+          mentorId,
+          latestMessage: message,
+        });
+      }
+    }
+
+    // 5️⃣ Fetch mentor details in bulk
+    const mentorIds = [...mentorMap.keys()];
+    const mentors = await User.find({ _id: { $in: mentorIds } })
+      .select("name profilePicture")
+      .lean();
+
+    const mentorInfoMap = new Map(
+      mentors.map((m) => [m._id.toString(), m])
+    );
+
+    // 6️⃣ Build final response
+    const chats = [...mentorMap.entries()]
+      .map(([mentorId, data]) => {
+        const mentor = mentorInfoMap.get(mentorId);
+
+        return {
+          mentor: {
+            id: mentorId,
+            name: mentor?.name || "Unknown Mentor",
+            profilePicture: mentor?.profilePicture?.url || null,
+          },
+          latestMessage: {
+            _id: data.latestMessage._id,
+            text: data.latestMessage.text,
+            senderId: data.latestMessage.senderId,
+            senderType:
+              data.latestMessage.senderId.toString() === studentId.toString()
+                ? "student"
+                : "mentor",
+            createdAt: data.latestMessage.createdAt,
+          },
+        };
+      })
+      // 7️⃣ Sort by latest message time
+      .sort(
+        (a, b) =>
+          new Date(b.latestMessage.createdAt) -
+          new Date(a.latestMessage.createdAt)
+      );
+
+    return res.status(200).json({ chats });
+  } catch (error) {
+    console.error("❌ Error fetching recent chats:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};

@@ -9,25 +9,33 @@ import { useAuthStore } from "../../../store/useAuthStore";
 
 export default function ChatPage() {
   const { mentorId } = useParams();
-  const { socket, connectSocket, messages, startConversation, sendMessage } =
+  const { socket, connectSocket, messages, startConversation, sendMessage, clearMessages, setCurrentChatPartner } =
     useChatStore();
   const [text, setText] = useState("");
   const [previousMessages, setPreviousMessages] = useState([]);
   const [mentorInfo, setMentorInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef(null);
-  const {mentor} = useAuthStore();
+  const { mentor } = useAuthStore();
 
   const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
   const studentId =
     typeof window !== "undefined" ? localStorage.getItem("studentId") : null;
 
+  // ✅ Clear messages and set current chat partner when mentor changes
+  useEffect(() => {
+    if (mentorId) {
+      clearMessages();
+      setCurrentChatPartner(mentorId);
+    }
+  }, [mentorId, clearMessages, setCurrentChatPartner]);
+
   // ✅ Connect socket
   useEffect(() => {
-    if (studentId && !socket){
+    if (studentId && !socket) {
       console.log("the chaanet ");
-      
-       connectSocket(studentId);
+
+      connectSocket(studentId);
     }
   }, [studentId, socket, connectSocket]);
 
@@ -36,13 +44,13 @@ export default function ChatPage() {
     const fetchPreviousMessages = async () => {
       try {
         setLoading(true);
-        console.log("call for the previouse chat", studentId , mentorId);
-        
+        console.log("call for the previouse chat", studentId, mentorId);
+
         const res = await axios.get(
           `${baseURL}/user/student/previouseChat/${mentorId}`,
           { withCredentials: true }
         );
-         console.log("call for the previouse chat respomse",res);
+        console.log("call for the previouse chat respomse", res);
         const fetched = res.data?.messages || [];
         const sorted = fetched.sort(
           (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
@@ -57,7 +65,7 @@ export default function ChatPage() {
     };
     if (mentorId && studentId) {
       console.log("caller function");
-      
+
       fetchPreviousMessages();
     }
   }, [mentorId, studentId]);
@@ -119,7 +127,7 @@ export default function ChatPage() {
           )}
           <div className="flex flex-col">
             <span className="font-semibold text-lg">{mentorInfo?.name || "Mentor"}</span>
-           
+
           </div>
         </div>
 
@@ -135,19 +143,18 @@ export default function ChatPage() {
               const time =
                 msg.createdAt && !isNaN(new Date(msg.createdAt))
                   ? new Date(msg.createdAt).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
                   : "";
 
               return (
                 <div key={msg._id || i} className={`flex ${isStudent ? "justify-end" : "justify-start"}`}>
                   <div
-                    className={`p-3 rounded-2xl max-w-[75%] md:max-w-[60%] break-words shadow-md ${
-                      isStudent
+                    className={`p-3 rounded-2xl max-w-[75%] md:max-w-[60%] break-words shadow-md ${isStudent
                         ? "bg-blue-600 text-white rounded-br-none"
                         : "bg-[#1b1b1b] text-gray-100 rounded-bl-none"
-                    }`}
+                      }`}
                   >
                     <p className="leading-relaxed">{msg.text}</p>
                     <span className="text-[10px] text-gray-300 block text-right mt-1">{time}</span>

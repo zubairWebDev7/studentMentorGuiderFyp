@@ -5,14 +5,21 @@ import { useStudentAuth } from "./studentAuth";
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
- 
+
 
 
 export const useChatStore = create((set, get) => ({
   socket: null,
   messages: [],
   currentChat: null,
+  currentChatPartner: null,
   onlineUsers: new Map(),
+
+  // 🔄 Set current chat partner for message filtering
+  setCurrentChatPartner: (partnerId) => set({ currentChatPartner: partnerId }),
+
+  // 🧹 Clear messages when switching chats
+  clearMessages: () => set({ messages: [] }),
 
   // 🔌 Initialize socket connection
   connectSocket: (userId) => {
@@ -46,31 +53,46 @@ export const useChatStore = create((set, get) => ({
 
     // 📨 Receive message
     socket.on("receive_message", (message) => {
-  console.log("📩 Received:", message);
+      console.log("📩 Received:", message);
 
-  // 1️⃣ Update messages in store
-  set((state) => ({ messages: [...state.messages, message] }));
+      // Get current state for filtering
+      const { currentChatPartner } = get();
+      const currentUserId = useStudentAuth.getState().id;
 
-  // 2️⃣ Show browser notification if sender is not current user
-  if (message.senderId !== useStudentAuth.getState().id) {
-    const senderName = message.senderRole === "mentor" ? "Mentor" : "Student";
-    
-    if ("Notification" in window && Notification.permission === "granted") {
-      const notification = new Notification(`${senderName} sent a message`, {
-        body: message.text,
-        icon: "/chat-icon.png", // optional: show your app icon
-        tag: message.conversationId, // avoid duplicate notifications for same chat
-      });
+      // Filter: Only add message if it belongs to current conversation
+      const isRelevantMessage =
+        (message.senderId === currentChatPartner && message.receiverId === currentUserId) ||
+        (message.senderId === currentUserId && message.receiverId === currentChatPartner);
 
-      // 3️⃣ When notification clicked → navigate to chat
-      notification.onclick = () => {
-        window.focus(); // bring browser to front
-        // navigate to chat page
-        window.location.href = `/chat/${message.senderId}`; // or your route
-      };
-    }
-  }
-});
+      if (isRelevantMessage) {
+        const currentMessages = get().messages;
+        console.log("in the messaeg updation", isRelevantMessage,currentMessages);
+        
+        
+        // 1️⃣ Update messages in store
+        set((state) => ({ messages: [...state.messages, message] }));
+        log
+      }
+
+      // 2️⃣ Show browser notification if sender is not current user
+      if (message.senderId !== currentUserId) {
+        const senderName = message.senderRole === "mentor" ? "Mentor" : "Student";
+
+        if ("Notification" in window && Notification.permission === "granted") {
+          const notification = new Notification(`${senderName} sent a message`, {
+            body: message.text,
+            icon: "/chat-icon.png",
+            tag: message.conversationId,
+          });
+
+          // 3️⃣ When notification clicked → navigate to chat
+          notification.onclick = () => {
+            window.focus();
+            window.location.href = `/chat/${message.senderId}`;
+          };
+        }
+      }
+    });
 
 
     // 💬 Conversation started
@@ -96,19 +118,24 @@ export const useChatStore = create((set, get) => ({
   },
 
   // ✉️ Send a message
-   sendMessage: (senderId, receiverId, text) => {
+  sendMessage: (senderId, receiverId, text) => {
     const { socket, messages } = get();
     if (!socket) return console.error("❌ Socket not connected");
-    
+
     // ✅ Get role from the auth store
     const { role } = useStudentAuth.getState();
     console.log("Role in chat store:", role);
 
     // Add role to message payload if needed
-    if(!senderId, receiverId, text, role) {
-      console.log("Missing fields")
+    if (!senderId || !receiverId || !text) {
+      console.log("Missing fields");
+      return;
     }
-    const message = { senderId, receiverId, text, senderRole: 'student' };
+    const currentRole = role || "mentor";
+    console.log("Current role:", currentRole); 
+    const message = { senderId, receiverId, text, senderRole: currentRole };
+
+    console.log("💬 Sending message:", message);
 
     socket.emit("send_message", message);
 

@@ -61,6 +61,7 @@ const io = new Server(server, {
 
 
 const onlineUsers = new Map();
+console.log("Socket.io server initialized and the online user map is set up.", onlineUsers);
 
 io.on("connection", (socket) => {
   console.log("🟢 New user connected:", socket.id);
@@ -92,57 +93,69 @@ io.on("connection", (socket) => {
   });
 
   // send message event
-socket.on("send_message", async ({ senderId, receiverId, text, senderRole }) => {
-  try {
-    // Validate all required fields
-    if (!senderId || !receiverId || !text || !senderRole) {
-      return socket.emit("error_message", "Missing required fields");
-    }
+  socket.on("send_message", async ({ senderId, receiverId, text, senderRole }) => {
+    try {
+      // Validate all required fields
+      if (!senderId || !receiverId || !text || !senderRole) {
+        return socket.emit("error_message", "Missing required fields");
+      }
 
-    console.log("💬 Sending message:", senderId, "→", receiverId, ":", text);
-
-    // 1️⃣ Find or create conversation
-    let conversation = await Conversation.findOne({
-      participants: { $all: [senderId, receiverId] },
-    });
-
-    if (!conversation) {
-      conversation = await Conversation.create({
-        participants: [senderId, receiverId],
+      console.log("💬  messagSendinge:", senderId, "→", receiverId, ":", text);
+ 
+      // 1️⃣ Find or create conversation
+      let conversation = await Conversation.findOne({
+        participants: { $all: [senderId, receiverId] },
       });
+
+      if (!conversation) {
+        conversation = await Conversation.create({
+          participants: [senderId, receiverId],
+        });
+      }
+
+      // 2️⃣ Determine dynamic models
+      const senderModel = senderRole === "mentor" ? "User" : "Student";
+      const receiverModel = senderRole === "mentor" ? "Student" : "User";
+
+      // 3️⃣ Create and save the message
+      const message = await Message.create({
+        conversationId: conversation._id,
+        senderId,
+        senderModel,
+        receiverId,
+        receiverModel,
+        text,
+      });
+
+      // 4️⃣ Update conversation
+      conversation.lastMessage = text;
+      conversation.updatedAt = new Date();
+      await conversation.save();
+
+      // 5️⃣ Prepare message payload with senderRole for frontend filtering
+      const messagePayload = {
+        ...message.toObject(),
+        senderRole,
+      };
+     
+
+      // // 6️⃣ Emit to receiver if rather than broadcasting send to that receiver that user only
+      console.log("Socket.io server initialized and the online user map is set up.", onlineUsers);
+      const receiverSocketId = onlineUsers.get(receiverId);
+      if (receiverSocketId) {
+        console.log(" the receiver id", receiverSocketId);
+        
+        io.to(receiverSocketId).emit("receive_message", messagePayload);
+      }
+
+      // 7️⃣ Emit back to sender for acknowledgment
+      socket.emit("message_sent", messagePayload);
+
+    } catch (error) {
+      console.error("❌ Error sending message:", error.message);
+      socket.emit("error_message", "Failed to send message");
     }
-
-    // 2️⃣ Determine dynamic models
-    const senderModel = senderRole === "mentor" ? "User" : "Student";
-    const receiverModel = senderRole === "mentor" ? "Student" : "User";
-
-    // 3️⃣ Create and save the message
-    const message = await Message.create({
-      conversationId: conversation._id,
-      senderId,
-      senderModel,
-      receiverId,
-      receiverModel,
-      text,
-    });
-
-    // 4️⃣ Update conversation
-    conversation.lastMessage = text;
-    conversation.updatedAt = new Date();
-    await conversation.save();
-
-    // 5️⃣ Emit to receiver if online
-    const receiverSocketId = onlineUsers.get(receiverId.toString());
-    if (receiverSocketId) io.to(receiverSocketId).emit("receive_message", message);
-
-    // 6️⃣ Emit back to sender for acknowledgment
-    socket.emit("message_sent", message);
-
-  } catch (error) {
-    console.error("❌ Error sending message:", error.message);
-    socket.emit("error_message", "Failed to send message");
-  }
-});
+  });
 
 
 

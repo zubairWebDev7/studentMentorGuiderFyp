@@ -2,6 +2,7 @@
 import { create } from "zustand";
 import { io } from "socket.io-client";
 import { useStudentAuth } from "./studentAuth";
+import { useAuthStore } from "./useAuthStore";
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -57,7 +58,10 @@ export const useChatStore = create((set, get) => ({
 
       // Get current state for filtering
       const { currentChatPartner } = get();
-      const currentUserId = useStudentAuth.getState().id;
+      // get the current user id from auth store but first get the mentor id from local storage  if mentorId avialble use this as mentor other get the student id from the student auth store
+      const mentorId = localStorage.getItem("mentorId");
+      const studentId = useStudentAuth.getState().id;
+      const currentUserId = mentorId || studentId;
 
       // Filter: Only add message if it belongs to current conversation
       const isRelevantMessage =
@@ -73,9 +77,13 @@ export const useChatStore = create((set, get) => ({
         set((state) => ({ messages: [...state.messages, message] }));
         log
       }
+      console.log("📩 Received:fgdfgdfgdg", message);
+
 
       // 2️⃣ Show browser notification if sender is not current user
       if (message.senderId !== currentUserId) {
+        console.log("in the notification block");
+        
         const senderName = message.senderRole === "mentor" ? "Mentor" : "Student";
 
         if ("Notification" in window && Notification.permission === "granted") {
@@ -91,6 +99,7 @@ export const useChatStore = create((set, get) => ({
             window.location.href = `/chat/${message.senderId}`;
           };
         }
+      }else {console.log("Notification not sent: Sender is current user");
       }
     });
 

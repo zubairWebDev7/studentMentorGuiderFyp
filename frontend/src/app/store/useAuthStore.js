@@ -22,7 +22,8 @@ export const useAuthStore = create(
             withCredentials: true,
           });
 
-          console.log("✅ Login Response:", response.data);
+          console.log("✅ Login Response: as mentor", response.data.mentor._id);
+          localStorage.setItem("mentorId", response.data.mentor._id); // Store mentor ID in localStorage
 
           if (response.data.mentor) {
             console.log("Mentor before setting:", response.data.mentor);

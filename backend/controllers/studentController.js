@@ -32,8 +32,11 @@ export const loginStudent = async(req, res) => {
     }
     if(comparePassword(password, studentInDb.password) === false){
         return res.status(401).json({ message: "Invalid password" });
+
     }
     const token = generateToken(studentInDb._id, "student");
+    console.log("req");
+    
     // auto set the response to cookies
     res.cookie("token", token, {
       httpOnly: true,
@@ -234,3 +237,11 @@ export const recentChats = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+// routes for the ask From AI Ai suggest the verified mentor to the student based on the student learning profile and the mentor expertise and availability and timezone compatibility and the student can also ask for specific mentor based on the mentor name or expertise and the AI will suggest the best match for the student based on the student learning profile and the mentor expertise and availability and timezone compatibilityalso take input prompt from the user 
+
+export const SuggestFromAi = async(req, res)=>{
+  const { prompt } = req.body;
+  const studentId = req.user.id;
+  
+
+}

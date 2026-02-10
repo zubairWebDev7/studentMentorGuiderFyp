@@ -1,5 +1,5 @@
 import express from "express";
-import { adminLogin, adminSignup } from "../controllers/adminController.js";
+import { adminLogin, adminSignup, approvedMentorswithRag } from "../controllers/adminController.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
 import { adminSignupSchema } from "../validations/adminValidation.js";
 import { adminLoginSchema } from "../validations/adminValidation.js";
@@ -22,7 +22,7 @@ adminRouter.post("/logout", (req, res) => {
 })
 adminRouter.get("/mentors",adminVerification, getAllMentors);
 // adminRoutes.js
-adminRouter.put("/mentors/:mentorId", adminVerification, approvedMentors);
+adminRouter.put("/mentors/:mentorId", adminVerification, approvedMentorswithRag);
 
 
 export default adminRouter;

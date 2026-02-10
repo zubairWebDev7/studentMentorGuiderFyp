@@ -16,6 +16,8 @@ const studentSchema = new mongoose.Schema({
     careerGoals: { type: String, required: true, trim: true },
     interests: { type: [String], required: true },
     languagePreference: { type: String, required: true, trim: true },
+    fieldOfStudy: { type: String, default: null, trim: true },
+    academicLevel: { type: String, default: null, trim: true },
     profilePicture: {
         url: { type: String, default: null },
         filename: { type: String, default: null },

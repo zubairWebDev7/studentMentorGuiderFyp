@@ -48,7 +48,7 @@ export default function StudentNavbar() {
         >
           <NavItem href="/student/profile" icon={<User size={18} />} label="Profile" />
           <NavItem href="/student/chats" icon={<MessageCircle size={18} />} label="Chats" />
-          <NavItem href="/student/ask-ai" icon={<Brain size={18} />} label="AskFromAI" />
+          <NavItem href="/student/ai-suggestion" icon={<Brain size={18} />} label="AskFromAI" />
           <NavItem href="/student/mentors" icon={<Users size={18} />} label="Mentors" />
 
           <motion.button

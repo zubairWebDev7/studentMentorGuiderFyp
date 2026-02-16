@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import MentorNavbar from '../../components/MentorNavbar';
 
 export default function MentorChatListPage() {
   const [students, setStudents] = useState([]);
@@ -36,7 +37,9 @@ export default function MentorChatListPage() {
   }, [baseURL]);
 
   return (
-    <div className="min-h-screen bg-[#0b0b0b] text-white flex flex-col items-center p-5">
+    <>
+      <MentorNavbar />
+      <div className="min-h-screen bg-[#0b0b0b] text-white flex flex-col items-center p-5">
       <div className="w-full md:w-2/3 lg:w-1/2 bg-[#111] rounded-xl shadow-lg overflow-hidden">
         {/* Header */}
         <div className="bg-blue-600/20 border-b border-blue-500/30 text-center py-3 font-semibold text-lg">
@@ -86,6 +89,7 @@ export default function MentorChatListPage() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

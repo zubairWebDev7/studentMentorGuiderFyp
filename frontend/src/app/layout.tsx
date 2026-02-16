@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
+import Footer from "../app/components/Footer"
 
 
 const geistSans = Geist({
@@ -36,7 +37,9 @@ export default function RootLayout({
         className={`${inter.variable} antialiased`}
       >
         {children}
+        <Footer/>
       </body>
+      
      
     </html>
   );

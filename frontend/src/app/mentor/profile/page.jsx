@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
+import MentorNavbar from '../../components/MentorNavbar';
 
 axios.defaults.withCredentials = true;
 
@@ -83,13 +84,15 @@ function Profile() {
     );
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-4 text-white">
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-        className="w-full max-w-lg bg-gradient-to-br from-[#0b132b]/70 to-[#1e2a5a]/70 backdrop-blur-md rounded-2xl shadow-2xl border border-blue-700/40 p-8"
-      >
+    <>
+      <MentorNavbar />
+      <div className="flex flex-col items-center justify-center min-h-screen px-4 text-white">
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="w-full max-w-lg bg-gradient-to-br from-[#0b132b]/70 to-[#1e2a5a]/70 backdrop-blur-md rounded-2xl shadow-2xl border border-blue-700/40 p-8"
+        >
         {/* Profile Image Section */}
         <div className="flex flex-col items-center relative">
           <div className="relative group">
@@ -181,8 +184,9 @@ function Profile() {
         <div className="mt-6 text-center text-gray-500 text-xs">
           Joined: {new Date(mentor.createdAt).toLocaleDateString()}
         </div>
-      </motion.div>
-    </div>
+        </motion.div>
+      </div>
+    </>
   );
 }
 

@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useChatStore } from "../../../store/chatStore";
 import axios from "axios";
 import { useAuthStore } from "../../../store/useAuthStore";
+import MentorNavbar from '../../../components/MentorNavbar';
 import '../../../../../global1.css'
 
 
@@ -121,8 +122,10 @@ export default function MentorChatPage() {
   ].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
   return (
-    <div className="flex justify-center min-h-screen bg-gradient-to-br from-[#050507] via-[#0b1020] to-[#040404] text-white">
-      <div className="flex flex-col w-full md:w-2/3 lg:w-[42%] bg-[#0d0f18]/95 backdrop-blur-xl rounded-3xl shadow-[0_0_45px_rgba(0,0,0,0.85)] border border-blue-500/15 overflow-hidden h-[90vh]">
+    <>
+      <MentorNavbar />
+      <div className="flex justify-center min-h-screen bg-gradient-to-br from-[#050507] via-[#0b1020] to-[#040404] text-white">
+        <div className="flex flex-col w-full md:w-2/3 lg:w-[42%] bg-[#0d0f18]/95 backdrop-blur-xl rounded-3xl shadow-[0_0_45px_rgba(0,0,0,0.85)] border border-blue-500/15 overflow-hidden h-[90vh]">
 
         {/* 🔷 HEADER */}
         <div className="flex items-center gap-4 px-6 py-4 bg-[#0b0e1a]/90 border-b border-blue-500/20 sticky top-0 z-20">
@@ -223,7 +226,8 @@ export default function MentorChatPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 
 }

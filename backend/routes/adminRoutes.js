@@ -1,5 +1,5 @@
 import express from "express";
-import { adminLogin, adminSignup, approvedMentorswithRag } from "../controllers/adminController.js";
+import { adminLogin, adminSignup, approvedMentorswithRag, getAllCourses, updateCourseStatus } from "../controllers/adminController.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
 import { adminSignupSchema } from "../validations/adminValidation.js";
 import { adminLoginSchema } from "../validations/adminValidation.js";
@@ -19,10 +19,15 @@ adminRouter.post("/logout", (req, res) => {
 
   
   res.json({ message: "Admin logged out successfully" });
-})
+})  
 adminRouter.get("/mentors",adminVerification, getAllMentors);
 // adminRoutes.js
 adminRouter.put("/mentors/:mentorId", adminVerification, approvedMentorswithRag);
+// get all courses that enrolled by User
+adminRouter.get("/courses", adminVerification, getAllCourses);
+// update the status of course pending to active 
+
+adminRouter.put("/courses/:courseId/", adminVerification,updateCourseStatus);
 
 
 export default adminRouter;

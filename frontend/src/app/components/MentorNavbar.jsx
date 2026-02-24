@@ -49,6 +49,7 @@ export default function MentorNavbar() {
           <NavItem href="/mentor/dashboard" icon={<BarChart3 size={18} />} label="Dashboard" />
           <NavItem href="/mentor/profile" icon={<User size={18} />} label="Profile" />
           <NavItem href="/mentor/allStudents" icon={<Users size={18} />} label="Students" />
+          <NavItem href="/mentor/allCourses" icon={<MessageCircle size={18} />} label="Courses" />
           
 
           <motion.button

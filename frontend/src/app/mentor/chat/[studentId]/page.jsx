@@ -70,7 +70,7 @@ export default function MentorChatPage() {
 
         setLoading(true);
         const res = await axios.get(
-          `${baseURL}/user/mentor/previouseChat/${studentId}`,
+          `${baseURL}/user/mentor/stdPreviouseChat/${studentId}`,
           { withCredentials: true }
         );
 

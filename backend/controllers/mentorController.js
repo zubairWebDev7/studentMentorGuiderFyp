@@ -7,6 +7,7 @@ import cloudinary from "../config/cloudinaryConfig.js";
 import Conversation from "../models/conversationModel.js";
 import Message from "../models/messageModel.js";
 import Student from "../models/Student.js";
+import Course from "../models/course.js";
 // import User from "../models/User.js";
 
 export const createMentor = async (req, res, next) => {
@@ -309,5 +310,168 @@ export const getPreviousChat = async (req, res) => {
   } catch (error) {
     console.error("❌ Error fetching chat:", error);
     res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+export const createCourse = async (req, res) => {
+  try {
+    const mentorId = req.user.id;
+
+    // ensure the user exists and is a mentor
+    const mentor = await User.findById(mentorId);
+    if (!mentor || mentor.role !== "mentor") {
+      return res.status(403).json({ message: "Only mentors can create courses" });
+    }
+
+    // Accept input from JSON body or multipart/form-data (strings)
+    const {
+      title,
+      subtitle,
+      description,
+      price,
+      durationHours,
+      syllabus,
+      tags,
+    } = req.body;
+
+    if (!title || !description) {
+      return res.status(400).json({ message: "Title and description are required" });
+    }
+
+    // Normalize possible stringified arrays (if sent from a form)
+    const parsedSyllabus =
+      typeof syllabus === "string" && syllabus.length
+        ? JSON.parse(syllabus)
+        : Array.isArray(syllabus)
+        ? syllabus
+        : [];
+
+    const parsedTags =
+      typeof tags === "string" && tags.length
+        ? JSON.parse(tags)
+        : Array.isArray(tags)
+        ? tags
+        : [];
+
+    // Build course data
+    const courseData = {
+      title: title.trim(),
+      subtitle: subtitle ? subtitle.trim() : null,
+      description,
+      mentor: mentorId,
+      price: price ? Number(price) : 0,
+      durationHours: durationHours ? Number(durationHours) : 0,
+      syllabus: parsedSyllabus,
+      tags: parsedTags,
+      // always create courses as pending for admin approval
+      status: "pending",
+    };
+
+    // If thumbnail file is uploaded, add its metadata
+    if (req.file) {
+      courseData.thumbnail = {
+        url: req.file.path,
+        filename: req.file.filename,
+      };
+    }
+
+    const createdCourse = await Course.create(courseData);
+
+    return res.status(201).json({ message: "Course created successfully", course: createdCourse });
+  } catch (error) {
+    console.error("❌ Error creating course:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+export const deleteCourse = async (req, res) => {
+  try {    const mentorId = req.user.id;
+    const { courseId } = req.params;
+    // delete the course only if it belongs to the mentor
+    const course = await Course.findOneAndDelete({ _id: courseId, mentor: mentorId });
+    if (!course) {
+      return res.status(404).json({ message: "Course not found or you don't have permission to delete it" });
+    }
+    return res.status(200).json({ message: "Course deleted successfully" });
+  } catch (error) {
+    console.error("❌ Error deleting course:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+export const getMyCourses = async (req, res) => {
+  try {
+    const mentorId = req.user.id;
+    const courses = await Course.find({ mentor: mentorId }).sort({ createdAt: -1 });
+    return res.status(200).json({ courses });
+  } catch (error) {
+    console.error("❌ Error fetching mentor courses:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+export const uploadCourseThumbnail = async (req, res, next) => {
+  try {
+    const mentorId = req.user.id;
+    const { courseId } = req.params;
+
+    // Check if file exists (multer adds it to req.file)
+    if (!req.file) {
+      return res.status(400).json({ message: "No image file uploaded" });
+    }
+
+    // Get Cloudinary file info
+    const imageUrl = req.file.path;
+    const filename = req.file.filename;
+
+    // Update course thumbnail only if it belongs to the mentor
+    const updatedCourse = await Course.findOneAndUpdate(
+      { _id: courseId, mentor: mentorId },
+      {
+        $set: {
+          "thumbnail.url": imageUrl,
+          "thumbnail.filename": filename,
+        },
+      },
+      { new: true }
+    );
+
+    if (!updatedCourse) {
+      return res.status(404).json({ message: "Course not found or you don't have permission to update it" });
+    }
+
+    return res.status(200).json({
+      message: "Course thumbnail uploaded successfully",
+      thumbnail: updatedCourse.thumbnail,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteCourseThumbnail = async (req, res, next) => {
+  try {
+    const mentorId = req.user.id;
+    const { courseId } = req.params;
+
+    const course = await Course.findOne({ _id: courseId, mentor: mentorId });
+    if (!course) {
+      return res.status(404).json({ message: "Course not found or you don't have permission to delete its thumbnail" });
+    }
+
+    // Check if course has an existing thumbnail
+    if (!course.thumbnail || !course.thumbnail.filename) {
+      return res.status(400).json({ message: "No thumbnail to delete" });
+    }
+
+    // Delete from Cloudinary
+    const publicId = course.thumbnail.filename;
+    await cloudinary.uploader.destroy(publicId);
+
+    // Remove from DB
+    course.thumbnail = { url: null, filename: null };
+    await course.save();
+
+    return res.status(200).json({ message: "Course thumbnail deleted successfully" });
+  } catch (error) {
+    next(error);
   }
 };

@@ -186,6 +186,7 @@ Keep it conversational and encouraging.
 
 import Conversation from "../models/conversationModel.js";
 import Message from "../models/messageModel.js";
+import Course from "../models/course.js";
 // import User from "../models/userModel.js"; // mentors
 
 export const getChats = async (req, res) => {
@@ -334,4 +335,16 @@ export const recentChats = async (req, res) => {
   }
 };
 // routes for the ask From AI Ai suggest the verified mentor to the student based on the student learning profile and the mentor expertise and availability and timezone compatibility and the student can also ask for specific mentor based on the mentor name or expertise and the AI will suggest the best match for the student based on the student learning profile and the mentor expertise and availability and timezone compatibilityalso take input prompt from the user 
-
+// get all the course that enrolled by User with status is active 
+export const getCourses= async (req, res) => {
+  try {
+    const studentId = req.user.id;
+    const courses = await Course
+  .find({ status: "active" })
+  .populate("mentor", "name email");
+  res.json({ courses });
+  } catch (err) {
+    console.error("Error fetching courses:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+};

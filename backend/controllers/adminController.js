@@ -4,6 +4,7 @@ import Admin from "../models/Admin.js";
 import { comparePassword, generateToken } from "../utils/authUtils.js";
 import User from "../models/User.js";
 import { getVectorStore, saveVectorStore } from "../utils/vectorStore.js";
+import Course from "../models/course.js";
 
 export const adminSignup = async(req, res) => {
     const adminCreated = await registerAdmin(req.body);
@@ -160,5 +161,35 @@ export const approvedMentorswithRag = async (req, res) => {
   } catch (error) {
     console.error("Error toggling mentor:", error);
     return res.status(500).json({ message: "Internal Server Error", error: error.message });
+  }
+};
+export const getAllCourses = async (req, res, next) => {
+  try {
+    // Allow optional filtering by mentorId via query string
+    const { mentorId } = req.query;
+    const filter = mentorId ? { mentor: mentorId } : {};
+    const courses = await Course.find(filter).populate("mentor", "name email");
+    res.json({ courses });
+  } catch (err) {
+    next(err);
+  }
+};
+export const updateCourseStatus = async (req, res, next) => {
+  try {
+    const { courseId } = req.params;
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
+    // Toggle status: active -> inactive, otherwise -> active
+    if (course.status === "active") {
+      course.status = "inactive";
+    } else {
+      course.status = "active";
+    }
+    await course.save();
+    res.json({ message: `Course status updated to ${course.status}`, course });
+  } catch (err) {
+    next(err);
   }
 };

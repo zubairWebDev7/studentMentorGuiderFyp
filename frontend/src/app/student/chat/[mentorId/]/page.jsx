@@ -1,24 +1,24 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { Send, ArrowLeft, MessageCircle, Loader } from "lucide-react";
-import StudentNavbar from "../../components/StudentNavbar";
+import StudentNavbar from "../../../components/StudentNavbar";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3006";
 
 export default function ChatPage() {
-  const searchParams = useSearchParams();
+  const params = useParams();
   const router = useRouter();
   
-  const mentorId = searchParams.get("mentorId");
-  const mentorName = searchParams.get("mentorName");
+  const mentorId = params.mentorId;
   
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingChat, setLoadingChat] = useState(true);
+  const [mentorName, setMentorName] = useState("Mentor");
 
   // Fetch previous chat history
   useEffect(() => {
@@ -100,7 +100,7 @@ export default function ChatPage() {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gradient-white">
-                {mentorName || "Mentor"}
+                {mentorName}
               </h2>
               <p className="text-xs text-gray-400">Online</p>
             </div>

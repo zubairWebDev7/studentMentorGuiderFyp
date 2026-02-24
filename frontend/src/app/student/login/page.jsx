@@ -2,6 +2,8 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useStudentAuth } from "../../store/studentAuth";
+import { motion } from "framer-motion";
+import { BookOpen, Mail, Lock } from "lucide-react";
 
 export default function StudentLoginPage() {
   const router = useRouter();
@@ -18,7 +20,7 @@ export default function StudentLoginPage() {
     e.preventDefault();
     setMessage("");
     console.log("call he login student");
-    
+
     const response = await loginStudent(formData, router);
 
     if (response?.message) {
@@ -29,70 +31,147 @@ export default function StudentLoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e293b] to-[#0f172a] text-white px-4">
-      <div className="w-full max-w-md bg-white/10 backdrop-blur-md p-8 rounded-2xl shadow-lg border border-blue-500/30">
-        <h1 className="text-3xl font-bold text-center mb-6 text-blue-400">
-          🎓 Student Login
-        </h1>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Email"
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-          />
-          <Input
-            label="Password"
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-          />
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 mt-4 rounded-lg bg-blue-600 hover:bg-blue-700 transition-all duration-200 font-semibold disabled:opacity-60"
-          >
-            {loading ? <Loader /> : "Login"}
-          </button>
-        </form>
-
-        {message && (
-          <div
-            className={`mt-6 p-3 text-center rounded-lg text-sm font-medium ${
-              message.includes("success")
-                ? "bg-green-600/30 text-green-300 border border-green-500/50"
-                : "bg-red-600/30 text-red-300 border border-red-500/50"
-            }`}
-          >
-            {message}
+    <div className="min-h-screen w-full flex items-center justify-center px-4 py-16">
+      <motion.div
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7 }}
+        className="w-full max-w-md"
+      >
+        {/* Header */}
+        <div className="text-center mb-8 flex flex-col items-center gap-3">
+          <div className="p-4 rounded-full bg-gradient-to-tr from-blue-800 to-blue-400 text-white shadow-md w-fit">
+            <BookOpen size={32} />
           </div>
-        )}
-      </div>
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-gradient-white">
+            Student Login
+          </h1>
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: 80 }}
+            transition={{ duration: 1, delay: 0.3 }}
+            className="h-1 bg-blue-400 rounded-full"
+          />
+          <p className="text-gradient-white text-sm mt-1">
+            Welcome back! Log in to continue your learning journey.
+          </p>
+        </div>
+
+        {/* Card */}
+        <div className="rounded-3xl backdrop-blur-sm bg-[#0c0c0c]/70 border border-gradient-blue shadow-2xl p-8">
+          <form onSubmit={handleSubmit} className="space-y-5">
+
+            <IconInput
+              icon={<Mail size={16} />}
+              label="Email"
+              type="email"
+              name="email"
+              placeholder="you@example.com"
+              value={formData.email}
+              onChange={handleChange}
+            />
+
+            <IconInput
+              icon={<Lock size={16} />}
+              label="Password"
+              type="password"
+              name="password"
+              placeholder="••••••••"
+              value={formData.password}
+              onChange={handleChange}
+            />
+
+            {/* Forgot password */}
+            <div className="text-right -mt-2">
+              <button
+                type="button"
+                onClick={() => router.push("/student/forgot-password")}
+                className="text-blue-400 text-xs hover:underline"
+              >
+                Forgot password?
+              </button>
+            </div>
+
+            <motion.button
+              type="submit"
+              disabled={loading}
+              whileHover={{ scale: 1.03, boxShadow: "0 0 20px rgba(59,130,246,0.6)" }}
+              whileTap={{ scale: 0.97 }}
+              className="w-full py-3.5 mt-2 rounded-2xl bg-blue-600 hover:bg-blue-500 transition-all font-semibold text-white text-base disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              {loading ? <Loader /> : "Log In"}
+            </motion.button>
+          </form>
+
+          {/* Message */}
+          {message && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`mt-5 p-3 text-center rounded-xl text-sm font-medium ${
+                message.includes("success")
+                  ? "bg-green-600/20 text-green-300 border border-green-500/40"
+                  : "bg-red-600/20 text-red-300 border border-red-500/40"
+              }`}
+            >
+              {message}
+            </motion.div>
+          )}
+
+          {/* Divider */}
+          <div className="flex items-center gap-3 my-6">
+            <div className="flex-1 h-px bg-white/10" />
+            <span className="text-gray-500 text-xs">don't have an account?</span>
+            <div className="flex-1 h-px bg-white/10" />
+          </div>
+
+          {/* Sign up button */}
+          <motion.button
+            onClick={() => router.push("/student/signup")}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            className="w-full py-3 rounded-2xl border border-gradient-blue hover:bg-blue-400/10 transition-all font-semibold text-gradient-white text-base"
+          >
+            Create an Account
+          </motion.button>
+        </div>
+
+        {/* Mentor link */}
+        <p className="text-center text-gray-500 text-xs mt-6">
+          Are you a mentor?{" "}
+          <button
+            onClick={() => router.push("/mentor/login")}
+            className="text-blue-400 hover:underline"
+          >
+            Log in as Mentor
+          </button>
+        </p>
+      </motion.div>
     </div>
   );
 }
 
-// ✅ Input Component
-const Input = ({ label, type = "text", ...props }) => (
+// ── Icon Input ──
+const IconInput = ({ icon, label, type = "text", placeholder, ...props }) => (
   <label className="block">
-    <span className="text-sm text-gray-300">{label}</span>
+    <span className="text-sm text-gray-300 flex items-center gap-2 mb-1">
+      <span className="text-blue-400">{icon}</span>
+      {label}
+    </span>
     <input
       type={type}
-      {...props}
       required
-      className="w-full px-3 py-2 mt-1 rounded-lg bg-transparent border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      placeholder={placeholder}
+      {...props}
+      className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
     />
   </label>
 );
 
-// ✅ Simple Loader
+// ── Loader ──
 const Loader = () => (
-  <div className="flex items-center justify-center">
-    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-    <span className="ml-2">Logging in...</span>
+  <div className="flex items-center justify-center gap-2">
+    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+    <span>Logging in...</span>
   </div>
 );

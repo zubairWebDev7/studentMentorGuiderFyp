@@ -117,6 +117,22 @@ export const insertInVectorDb = async (mentorText, mentor) => {
   // Save embedding to MongoDB
   mentor.embedding = cleanEmbedding;
   await mentor.save();
+  return mentor.embedding;
 
   console.log("✅ Saved mentor embedding to MongoDB:", mentor._id.toString());
+};
+export const setEmbeddingNull = async (mentorId) => {
+  try {
+    const mentor = await User.findById(mentorId);
+    if (!mentor) {
+      throw new Error("Mentor not found");
+    }
+    mentor.embedding = null;
+    await mentor.save();
+    console.log("✅ Set mentor embedding to null in MongoDB:", mentor._id.toString());
+    return true;
+  } catch (error) {
+    console.error("❌ Error setting mentor embedding to null:", error);
+    return false;
+  }
 };

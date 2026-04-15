@@ -3,7 +3,7 @@ import { registerAdmin } from "../services/adminService.js";
 import Admin from "../models/Admin.js";
 import { comparePassword, generateToken } from "../utils/authUtils.js";
 import User from "../models/User.js";
-import { insertInVectorDb } from "../utils/vectorStore.js";
+import { insertInVectorDb, setEmbeddingNull } from "../utils/vectorStore.js";
 
 import Course from "../models/course.js";
 
@@ -106,6 +106,9 @@ export const approvedMentorswithRag = async (req, res) => {
       
     }else{
       // Remove from vector DB logic here
+      //       Embedding emove
+      const embedingRemoved = await setEmbeddingNull(mentor._id.toString());
+      console.log("the embedding is removed", embedingRemoved);
     }
 
     // const vectorStore = await getVectorStore();

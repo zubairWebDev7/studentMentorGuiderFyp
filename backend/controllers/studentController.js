@@ -3,6 +3,7 @@ import Student from "../models/Student.js";
 import User from "../models/User.js";
 import { comparePassword, generateToken, hashPassword } from "../utils/authUtils.js";
 import { ChatOpenAI } from "@langchain/openai";
+import { createEmbedding } from "../utils/embeding.js";
 // import { getVectorStore } from "../utils/vectorStore.js";
 
 
@@ -101,6 +102,17 @@ export const getMentors = async (req, res)=>{
   }
 }
 export const SuggestFromAi = async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    const studentId = req.user.id;
+    const studentInDb = await Student.findById(studentId);
+    if (!studentInDb) {
+      return res.status(401).json({ message: "Invalid student" });
+    }
+    const promptEmbedding = await createEmbedding(prompt);
+    console.log("the prompt embedding", promptEmbedding);
+    // query from the user table that have emdediing attribute to maych the 
+    // embedding the student 
 //   try {
 //     const { prompt } = req.body;
 //     const studentId = req.user.id;

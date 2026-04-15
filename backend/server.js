@@ -17,6 +17,8 @@ import Message from "./models/messageModel.js";
 import mentorRoutes from "./routes/mentorRoutes.js";
 import adminRouter from "./routes/adminRoutes.js";
 import studentRouter from "./routes/studentRoutes.js";
+import { index } from "./config/pinecone.js";
+import { createEmbedding } from "./utils/embeding.js";
 
 dotenv.config();
 
@@ -171,10 +173,19 @@ io.on("connection", (socket) => {
 });
 
 // -------------------- DATABASE + SERVER START --------------------
+
 mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => {
     console.log("✅ MongoDB Connected");
     server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
   })
-  .catch((err) => console.error("❌ MongoDB Connection Error:", err));
+  .catch((err) => console.error("❌ MongoDB Connection Error: with uri",process.env.MONGODB_URI, err));
+
+  // try {
+  //   const response = await createEmbedding("Hello, world!");
+  // console.log("Embedding created successfully:", response);
+  // } catch (error) {
+  //   console.error("Error creating embedding:", error);
+  // }
+  

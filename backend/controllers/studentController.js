@@ -3,7 +3,7 @@ import Student from "../models/Student.js";
 import User from "../models/User.js";
 import { comparePassword, generateToken, hashPassword } from "../utils/authUtils.js";
 import { ChatOpenAI } from "@langchain/openai";
-import { getVectorStore } from "../utils/vectorStore.js";
+// import { getVectorStore } from "../utils/vectorStore.js";
 
 
 export const signupStudent = async(req, res) => {
@@ -101,87 +101,87 @@ export const getMentors = async (req, res)=>{
   }
 }
 export const SuggestFromAi = async (req, res) => {
-  try {
-    const { prompt } = req.body;
-    const studentId = req.user.id;
+//   try {
+//     const { prompt } = req.body;
+//     const studentId = req.user.id;
     
-    const studentInDb = await Student.findById(studentId);
-    if (!studentInDb) {
-      return res.status(401).json({ message: "Invalid student" });
-    }
+//     const studentInDb = await Student.findById(studentId);
+//     if (!studentInDb) {
+//       return res.status(401).json({ message: "Invalid student" });
+//     }
 
-    const vectorStore = await getVectorStore();
-    const searchQuery = `${studentInDb.interests?.join(', ')} ${studentInDb.fieldOfStudy} ${prompt}`;
-    const relevantMentors = await vectorStore.similaritySearch(searchQuery, 5);
+//     const vectorStore = await getVectorStore();
+//     const searchQuery = `${studentInDb.interests?.join(', ')} ${studentInDb.fieldOfStudy} ${prompt}`;
+//     const relevantMentors = await vectorStore.similaritySearch(searchQuery, 5);
 
-    if (relevantMentors.length === 0) {
-      return res.status(404).json({ 
-        message: "No approved mentors found. Please try again later." 
-      });
-    }
+//     if (relevantMentors.length === 0) {
+//       return res.status(404).json({ 
+//         message: "No approved mentors found. Please try again later." 
+//       });
+//     }
 
-    // Get actual mentor data from database
-    const mentorIds = relevantMentors.map(doc => doc.metadata.mentorId);
-    const mentorsFromDb = await User.find({
-      _id: { $in: mentorIds },
-      role: 'mentor',
-      approved: true
-    }).select('-password');
+//     // Get actual mentor data from database
+//     const mentorIds = relevantMentors.map(doc => doc.metadata.mentorId);
+//     const mentorsFromDb = await User.find({
+//       _id: { $in: mentorIds },
+//       role: 'mentor',
+//       approved: true
+//     }).select('-password');
 
-    const mentorContext = relevantMentors
-      .map((doc, index) => `Mentor ${index + 1}: ${doc.pageContent}`)
-      .join('\n');
-      console.log( "ye", mentorContext);
+//     const mentorContext = relevantMentors
+//       .map((doc, index) => `Mentor ${index + 1}: ${doc.pageContent}`)
+//       .join('\n');
+//       console.log( "ye", mentorContext);
       
 
-    const studentContext = `
-      Student Profile:
-      - Name: ${studentInDb.name || 'N/A'}
-      - Field of Study: ${studentInDb.fieldOfStudy || 'N/A'}
-      - Interests: ${studentInDb.interests?.join(', ') || 'N/A'}
-      - Academic Level: ${studentInDb.academicLevel || 'N/A'}
-    `;
+//     const studentContext = `
+//       Student Profile:
+//       - Name: ${studentInDb.name || 'N/A'}
+//       - Field of Study: ${studentInDb.fieldOfStudy || 'N/A'}
+//       - Interests: ${studentInDb.interests?.join(', ') || 'N/A'}
+//       - Academic Level: ${studentInDb.academicLevel || 'N/A'}
+//     `;
 
-    const llm = new ChatOpenAI({
-      model: "gpt-4o-mini",
-      temperature: 0.7,
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+//     const llm = new ChatOpenAI({
+//       model: "gpt-4o-mini",
+//       temperature: 0.7,
+//       apiKey: process.env.OPENAI_API_KEY,
+//     });
 
-    const aiPrompt = `
-You are a helpful academic advisor AI. Based on the student's profile and available mentors, provide personalized mentor recommendations.
-if the student is asking for a specific mentor or expertise, prioritize that in your response.also if the mentor context have same id in the mentor context consider it as one not duplicate and also consider the mentor with the highest similarity score as the best match and provide the reason for that in the response and also provide the name of the mentor in the response and also provide the expertise of the mentor in the response and also provide the experience of the mentor in years in the response and also provide the skill level of the mentor in the response and also provide the timezone of the mentor in the response and also provide the availability of the mentor in terms of hours per week in the response and also provide a warm and personalized message to encourage the student to reach out to these mentors.
-${studentContext}
+//     const aiPrompt = `
+// You are a helpful academic advisor AI. Based on the student's profile and available mentors, provide personalized mentor recommendations.
+// if the student is asking for a specific mentor or expertise, prioritize that in your response.also if the mentor context have same id in the mentor context consider it as one not duplicate and also consider the mentor with the highest similarity score as the best match and provide the reason for that in the response and also provide the name of the mentor in the response and also provide the expertise of the mentor in the response and also provide the experience of the mentor in years in the response and also provide the skill level of the mentor in the response and also provide the timezone of the mentor in the response and also provide the availability of the mentor in terms of hours per week in the response and also provide a warm and personalized message to encourage the student to reach out to these mentors.
+// ${studentContext}
 
-Available Mentors:
-${mentorContext}
+// Available Mentors:
+// ${mentorContext}
 
-Student's Question/Request: ${prompt}
+// Student's Question/Request: ${prompt}
 
-Provide a warm, personalized response explaining:
-1. Why these mentors are good matches
-2. How each mentor can specifically help this student
-3. What the student should consider when reaching out
+// Provide a warm, personalized response explaining:
+// 1. Why these mentors are good matches
+// 2. How each mentor can specifically help this student
+// 3. What the student should consider when reaching out
 
-Keep it conversational and encouraging.
-    `;
+// Keep it conversational and encouraging.
+//     `;
 
-    const response = await llm.invoke(aiPrompt);
+//     const response = await llm.invoke(aiPrompt);
 
-    return res.status(200).json({
-      success: true,
-      aiSuggestion: response.content,
-      recommendedMentors: mentorsFromDb, // Full mentor objects
-      totalFound: relevantMentors.length
-    });
+//     return res.status(200).json({
+//       success: true,
+//       aiSuggestion: response.content,
+//       recommendedMentors: mentorsFromDb, // Full mentor objects
+//       totalFound: relevantMentors.length
+//     });
 
-  } catch (error) {
-    console.error("Error in SuggestFromAi:", error);
-    return res.status(500).json({ 
-      message: "Internal Server Error", 
-      error: error.message 
-    });
-  }
+//   } catch (error) {
+//     console.error("Error in SuggestFromAi:", error);
+//     return res.status(500).json({ 
+//       message: "Internal Server Error", 
+//       error: error.message 
+//     });
+//   }
 };
 
 import Conversation from "../models/conversationModel.js";

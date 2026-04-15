@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema({
     },
     role: { type: String, default: "mentor" },
     status: { type: String, enum: ["active", "inactive", "pending"], default: "active" },
+    embedding: { type: [Number], default: [] },
     createdAt: { type: Date, default: Date.now },
 });
 

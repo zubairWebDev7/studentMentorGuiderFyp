@@ -3,7 +3,8 @@ import { registerAdmin } from "../services/adminService.js";
 import Admin from "../models/Admin.js";
 import { comparePassword, generateToken } from "../utils/authUtils.js";
 import User from "../models/User.js";
-import { getVectorStore, saveVectorStore } from "../utils/vectorStore.js";
+import { insertInVectorDb } from "../utils/vectorStore.js";
+
 import Course from "../models/course.js";
 
 export const adminSignup = async(req, res) => {
@@ -86,15 +87,13 @@ export const approvedMentorswithRag = async (req, res) => {
     if (!mentor) {
       return res.status(404).json({ message: "Mentor not found or invalid role" });
     }
+    console.log("test ",mentor);
+    
 
     // Toggle approval
     mentor.approved = !mentor.approved;
     await mentor.save();
-
-    const vectorStore = await getVectorStore();
-
-    // ✅ If APPROVED: Add to vector DB
-    if (mentor.approved) {
+    if(mentor.approved){
       const mentorText = `
       Mentor ID: ${mentor._id}
       Mentor Name: ${mentor.name}
@@ -102,57 +101,76 @@ export const approvedMentorswithRag = async (req, res) => {
       Experience: ${mentor.experience} years
       Skill Level: ${mentor.skillLevel}
       `;
-
-      await vectorStore.addDocuments([
-        {
-          pageContent: mentorText,
-          metadata: {
-            mentorId: mentor._id.toString(),
-            profession: mentor.profession,
-            skillLevel: mentor.skillLevel,
-          },
-        },
-      ]);
-
-      console.log("✅ Mentor added to vector store");
-      await saveVectorStore(vectorStore);
-    } 
-    // ❌ If DISAPPROVED: Remove from vector DB
-    else {
-      // Get all documents from the store
-      const allDocs = vectorStore.docstore._docs;
+      const saveInVectoreDb = await insertInVectorDb(mentorText, mentor);
+      console.log("the data is saved",saveInVectoreDb);
       
-      // Find and remove documents matching this mentorId
-      let removed = false;
-      for (const [key, doc] of allDocs.entries()) {
-        if (doc.metadata?.mentorId === mentor._id.toString()) {
-          allDocs.delete(key);
-          
-          // Also remove from mapping
-          const mappingKey = Object.keys(vectorStore._mapping).find(
-            k => vectorStore._mapping[k] === key
-          );
-          if (mappingKey) {
-            delete vectorStore._mapping[mappingKey];
-          }
-          
-          removed = true;
-          console.log(`❌ Mentor ${mentorId} removed from vector store`);
-        }
-      }
-
-      if (!removed) {
-        console.log("⚠️ Mentor not found in vector store");
-      }
-
-      // Only save if there are remaining documents
-      if (allDocs.size > 0) {
-        await saveVectorStore(vectorStore);
-      } else {
-        console.log("🗑️ Vector store is now empty, deleting files...");
-        await deleteVectorStore();
-      }
+    }else{
+      // Remove from vector DB logic here
     }
+
+    // const vectorStore = await getVectorStore();
+
+    // // ✅ If APPROVED: Add to vector DB
+    // if (mentor.approved) {
+    //   const mentorText = `
+    //   Mentor ID: ${mentor._id}
+    //   Mentor Name: ${mentor.name}
+    //   Profession: ${mentor.profession}
+    //   Experience: ${mentor.experience} years
+    //   Skill Level: ${mentor.skillLevel}
+    //   `;
+
+    //   await vectorStore.addDocuments([
+    //     {
+    //       pageContent: mentorText,
+    //       metadata: {
+    //         mentorId: mentor._id.toString(),
+    //         profession: mentor.profession,
+    //         skillLevel: mentor.skillLevel,
+    //       },
+    //     },
+    //   ]);
+
+    //   console.log("✅ Mentor added to vector store");
+      // await saveVectorStore(vectorStore);
+    // } 
+    // // ❌ If DISAPPROVED: Remove from vector DB
+    // else {
+    //   // Get all documents from the store
+    //   const allDocs = vectorStore.docstore._docs;
+      
+    //   // Find and remove documents matching this mentorId
+    //   let removed = false;
+    //   for (const [key, doc] of allDocs.entries()) {
+    //     if (doc.metadata?.mentorId === mentor._id.toString()) {
+    //       allDocs.delete(key);
+          
+    //       // Also remove from mapping
+    //       const mappingKey = Object.keys(vectorStore._mapping).find(
+    //         k => vectorStore._mapping[k] === key
+    //       );
+    //       if (mappingKey) {
+    //         delete vectorStore._mapping[mappingKey];
+    //       }
+          
+    //       removed = true;
+    //       console.log(`❌ Mentor ${mentorId} removed from vector store`);
+    //     }
+    //   }
+
+    //   if (!removed) {
+    //     console.log("⚠️ Mentor not found in vector store");
+    //   }
+
+    //   // Only save if there are remaining documents
+    //   if (allDocs.size > 0) {
+    //     await saveVectorStore(vectorStore);
+    //   } else {
+    //     console.log("🗑️ Vector store is now empty, deleting files...");
+    //     await deleteVectorStore();
+    //   }
+    // }
+
 
     return res.status(200).json({
       message: `Mentor ${mentor.approved ? "approved" : "disapproved"} successfully`,

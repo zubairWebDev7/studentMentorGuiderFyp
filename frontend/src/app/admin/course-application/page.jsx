@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { BookOpen, User, CheckCircle, Clock, RefreshCw, AlertCircle } from "lucide-react";
+import AdminNavbar from "../../components/AdminNavbar";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3006";
 
@@ -44,6 +45,7 @@ export default function Page() {
 
   return (
     <div className="min-h-screen w-full px-6 py-16">
+      <AdminNavbar />
       <div className="max-w-5xl mx-auto">
 
         {/* Header */}

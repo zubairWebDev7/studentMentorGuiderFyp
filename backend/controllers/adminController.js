@@ -214,3 +214,32 @@ export const updateCourseStatus = async (req, res, next) => {
     next(err);
   }
 };
+export const deleteMentor = async (req, res) => {
+  try {
+    const { mentorId } = req.params;
+
+    const mentor = await User.findOne({ _id: mentorId, role: "mentor" });
+    if (!mentor) {
+      return res.status(404).json({ message: "Mentor not found" });
+    }
+
+    // Optional but recommended: clean up the mentor's courses too,
+    // otherwise you'll have orphaned course records pointing to a
+    // non-existent mentor.
+    await Course.deleteMany({ mentor: mentorId });
+
+    await User.findByIdAndDelete(mentorId);
+
+    return res.status(200).json({
+      message: "Mentor deleted successfully",
+      mentorId,
+    });
+  } catch (error) {
+    console.error("❌ Error deleting mentor:", error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+

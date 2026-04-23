@@ -1,239 +1,236 @@
-// import conversationModel from "../models/conversationModel.js";
 import Student from "../models/Student.js";
 import User from "../models/User.js";
+import Conversation from "../models/conversationModel.js";
+import Message from "../models/messageModel.js";
+import Course from "../models/course.js";
 import { comparePassword, generateToken, hashPassword } from "../utils/authUtils.js";
 import { ChatOpenAI } from "@langchain/openai";
 import { createEmbedding } from "../utils/embeding.js";
-// import { getVectorStore } from "../utils/vectorStore.js";
+import { findSimilarMentors } from "../utils/vectorStore.js";
 
-
-export const signupStudent = async(req, res) => {
-    const { name, email, password, educationLevel, careerGoals, interests, languagePreference } = req.body;
-    const hashedPassword =await hashPassword(password);
-    const newStudent = {
-        name,
-        email,
-        password:hashedPassword,
-        educationLevel,
-        careerGoals,
-        interests,
-        languagePreference
-    };
-    console.log("New Student Signup:", newStudent);
-    const studentCreated =await  Student.create(newStudent);
-    res.status(201).json({ message: "Student signed up successfully",
-        student: studentCreated
-     });
-
+export const signupStudent = async (req, res) => {
+  const { name, email, password, educationLevel, careerGoals, interests, languagePreference } = req.body;
+  const hashedPassword = await hashPassword(password);
+  const newStudent = {
+    name,
+    email,
+    password: hashedPassword,
+    educationLevel,
+    careerGoals,
+    interests,
+    languagePreference,
+  };
+  console.log("New Student Signup:", newStudent);
+  const studentCreated = await Student.create(newStudent);
+  res.status(201).json({
+    message: "Student signed up successfully",
+    student: studentCreated,
+  });
 };
-export const loginStudent = async(req, res) => {
-    const { email, password } = req.body;
-    const studentInDb = await Student.findOne({ email: email });
-    if(!studentInDb){
-        return res.status(401).json({ message: "Invalid email" });
 
-    }
-    if(comparePassword(password, studentInDb.password) === false){
-        return res.status(401).json({ message: "Invalid password" });
+export const loginStudent = async (req, res) => {
+  const { email, password } = req.body;
+  const studentInDb = await Student.findOne({ email: email });
+  if (!studentInDb) {
+    return res.status(401).json({ message: "Invalid email" });
+  }
+  if (comparePassword(password, studentInDb.password) === false) {
+    return res.status(401).json({ message: "Invalid password" });
+  }
+  const token = generateToken(studentInDb._id, "student");
 
-    }
-    const token = generateToken(studentInDb._id, "student");
-    console.log("req");
-    
-    // auto set the response to cookies
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: false, // Set to false in development (localhost)
-      sameSite: 'lax', // Change from 'strict' to 'lax'
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/'
-
-    });
-    return res.status(200).json({ message: "Student login successful",
-        accessToken: token, 
-        role:"student"
-     });
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: false,
+    sameSite: "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/",
+  });
+  return res.status(200).json({
+    message: "Student login successful",
+    accessToken: token,
+    role: "student",
+  });
 };
+
 export const getStudentProfile = async (req, res) => {
-    try {
-        console.log("the student ");
-    
-    console.log("req user with id", req.user);
+  try {
     const studentId = req.user.id;
     const student = await Student.findById(studentId).select("-password");
     if (!student) {
-        return res.status(404).json({ message: "Student not found" });
+      return res.status(404).json({ message: "Student not found" });
     }
-    res.status(200).json({ student , 
-    message: "Student profile fetched successfully"
+    res.status(200).json({
+      student,
+      message: "Student profile fetched successfully",
     });
-    } catch (error) {
-        console.error("Error toggling mentor:", error);
-    return res.status(500).json({ message: "Internal Server Error" });
-    }
-
-
-}
-export const viewMentorProfile = async (req, res) => {
-    try {
-        const { mentorId } = req.params;
-        const mentor = await User.findOne({ _id: mentorId, role: "mentor", approved: true }).select("-password");
-        if (!mentor) {
-            return res.status(404).json({ message: "Mentor not found or not approved" });
-        }
-        res.status(200).json({ mentor ,
-        message: "Mentor profile fetched successfully"
-        });
-    } catch (error) {
-        console.error("Error fetching mentor profile:", error);
-        return res.status(500).json({ message: "Internal Server Error" });
-    }
-};
-export const getMentors = async (req, res)=>{
-     try {
-    // This function should interact with the service layer to fetch all mentors
-    // Placeholder implementation
-    const mentors = await User.find({ role: "mentor" , approved:true , status:"active"}).select("-password"); 
-
-    res.json({ mentors });
-  }catch(err){
-    console.error("Error toggling mentor:", err);
+  } catch (error) {
+    console.error("Error fetching student profile:", error);
     return res.status(500).json({ message: "Internal Server Error" });
   }
-}
+};
+
+export const viewMentorProfile = async (req, res) => {
+  try {
+    const { mentorId } = req.params;
+    const mentor = await User.findOne({ _id: mentorId, role: "mentor", approved: true }).select("-password");
+    if (!mentor) {
+      return res.status(404).json({ message: "Mentor not found or not approved" });
+    }
+    res.status(200).json({
+      mentor,
+      message: "Mentor profile fetched successfully",
+    });
+  } catch (error) {
+    console.error("Error fetching mentor profile:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const getMentors = async (req, res) => {
+  try {
+    const mentors = await User.find({ role: "mentor", approved: true, status: "active" }).select("-password");
+    res.json({ mentors });
+  } catch (err) {
+    console.error("Error fetching mentors:", err);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
+
 export const SuggestFromAi = async (req, res) => {
   try {
     const { prompt } = req.body;
     const studentId = req.user.id;
+
+    if (!prompt || !prompt.trim()) {
+      return res.status(400).json({ message: "Prompt is required" });
+    }
+
     const studentInDb = await Student.findById(studentId);
     if (!studentInDb) {
       return res.status(401).json({ message: "Invalid student" });
     }
-    const promptEmbedding = await createEmbedding(prompt);
-    console.log("the prompt embedding", promptEmbedding);
-    // query from the user table that have emdediing attribute to maych the 
-    // embedding the student 
-//   try {
-//     const { prompt } = req.body;
-//     const studentId = req.user.id;
-    
-//     const studentInDb = await Student.findById(studentId);
-//     if (!studentInDb) {
-//       return res.status(401).json({ message: "Invalid student" });
-//     }
 
-//     const vectorStore = await getVectorStore();
-//     const searchQuery = `${studentInDb.interests?.join(', ')} ${studentInDb.fieldOfStudy} ${prompt}`;
-//     const relevantMentors = await vectorStore.similaritySearch(searchQuery, 5);
+    const studentInterests = Array.isArray(studentInDb.interests)
+      ? studentInDb.interests.join(", ")
+      : studentInDb.interests || "";
 
-//     if (relevantMentors.length === 0) {
-//       return res.status(404).json({ 
-//         message: "No approved mentors found. Please try again later." 
-//       });
-//     }
+    // 🔑 Use the PROMPT as the primary search signal.
+    // The prompt reflects what the student wants to learn *now*,
+    // not what they already know.
+    const searchQuery = prompt.trim();
 
-//     // Get actual mentor data from database
-//     const mentorIds = relevantMentors.map(doc => doc.metadata.mentorId);
-//     const mentorsFromDb = await User.find({
-//       _id: { $in: mentorIds },
-//       role: 'mentor',
-//       approved: true
-//     }).select('-password');
+    // 1️⃣ Vector search driven by the prompt only
+    const topMentors = await findSimilarMentors(searchQuery, 5);
 
-//     const mentorContext = relevantMentors
-//       .map((doc, index) => `Mentor ${index + 1}: ${doc.pageContent}`)
-//       .join('\n');
-//       console.log( "ye", mentorContext);
-      
+    // 2️⃣ Apply a relevance threshold — if nothing is genuinely close,
+    // don't pretend otherwise.
+    const RELEVANCE_THRESHOLD = 0.35; // tune between 0.30 - 0.45
+    const relevantMentors = topMentors.filter(
+      (m) => m.similarity >= RELEVANCE_THRESHOLD
+    );
 
-//     const studentContext = `
-//       Student Profile:
-//       - Name: ${studentInDb.name || 'N/A'}
-//       - Field of Study: ${studentInDb.fieldOfStudy || 'N/A'}
-//       - Interests: ${studentInDb.interests?.join(', ') || 'N/A'}
-//       - Academic Level: ${studentInDb.academicLevel || 'N/A'}
-//     `;
+    // Case A: No relevant mentors at all
+    if (relevantMentors.length === 0) {
+      return res.status(200).json({
+        aiSuggestion: `I couldn't find a mentor who specializes in "${prompt}" right now. Our current mentors focus on different areas. You can browse all mentors on the Mentors page, or check back soon as new mentors join regularly.`,
+        recommendedMentors: [],
+        totalFound: 0,
+        noDirectMatch: true,
+      });
+    }
 
-//     const llm = new ChatOpenAI({
-//       model: "gpt-4o-mini",
-//       temperature: 0.7,
-//       apiKey: process.env.OPENAI_API_KEY,
-//     });
+    // 3️⃣ Build LLM context — profile is shown here so the LLM can
+    // personalize the *narration*, but it didn't bias the search.
+    const studentContext = `
+Student Profile:
+- Name: ${studentInDb.name || "N/A"}
+- Education Level: ${studentInDb.educationLevel || "N/A"}
+- Career Goals: ${studentInDb.careerGoals || "N/A"}
+- Existing Interests: ${studentInterests || "N/A"}
+    `.trim();
 
-//     const aiPrompt = `
-// You are a helpful academic advisor AI. Based on the student's profile and available mentors, provide personalized mentor recommendations.
-// if the student is asking for a specific mentor or expertise, prioritize that in your response.also if the mentor context have same id in the mentor context consider it as one not duplicate and also consider the mentor with the highest similarity score as the best match and provide the reason for that in the response and also provide the name of the mentor in the response and also provide the expertise of the mentor in the response and also provide the experience of the mentor in years in the response and also provide the skill level of the mentor in the response and also provide the timezone of the mentor in the response and also provide the availability of the mentor in terms of hours per week in the response and also provide a warm and personalized message to encourage the student to reach out to these mentors.
-// ${studentContext}
+    const mentorContext = relevantMentors
+      .map(
+        (m, i) => `Mentor ${i + 1}:
+- Name: ${m.name}
+- Profession: ${m.profession}
+- Experience: ${m.experience} years
+- Skill Level: ${m.skillLevel}
+- Relevance to request: ${(m.similarity * 100).toFixed(1)}%`
+      )
+      .join("\n\n");
 
-// Available Mentors:
-// ${mentorContext}
+    const llm = new ChatOpenAI({
+      model: "gpt-4o-mini",
+      temperature: 0.5,
+      apiKey: process.env.OPENAI_API_KEY,
+    });
 
-// Student's Question/Request: ${prompt}
+    // 🔑 Strict prompt — the LLM must NOT oversell weak matches.
+    const aiPrompt = `
+You are a straightforward academic advisor helping a student find a mentor.
 
-// Provide a warm, personalized response explaining:
-// 1. Why these mentors are good matches
-// 2. How each mentor can specifically help this student
-// 3. What the student should consider when reaching out
+${studentContext}
 
-// Keep it conversational and encouraging.
-//     `;
+Student's Current Request:
+"${prompt}"
 
-//     const response = await llm.invoke(aiPrompt);
+Candidate Mentors (ranked by semantic relevance to the request):
+${mentorContext}
 
-//     return res.status(200).json({
-//       success: true,
-//       aiSuggestion: response.content,
-//       recommendedMentors: mentorsFromDb, // Full mentor objects
-//       totalFound: relevantMentors.length
-//     });
+Write a concise, honest response (120-200 words) that:
+1. Directly addresses what the student asked for ("${prompt}").
+2. For each mentor you recommend, state HONESTLY whether their profession directly matches the request, or whether they are only adjacent/tangentially related.
+3. If a mentor's profession does NOT clearly match the request, say so plainly — e.g. "Zubiii is a web developer, not a DevOps specialist, but could help you with the development side that connects to DevOps workflows." Do NOT pretend a beginner web developer is a good DevOps mentor.
+4. If none of the mentors are a strong direct match, say that clearly and suggest the student revisit later or browse other mentors.
+5. Do NOT invent skills, certifications, or expertise not listed above.
+6. Skip mentors with Skill Level "beginner" unless their profession is an exact match for the request.
 
-//   } catch (error) {
-//     console.error("Error in SuggestFromAi:", error);
-//     return res.status(500).json({ 
-//       message: "Internal Server Error", 
-//       error: error.message 
-//     });
-//   }
+Tone: friendly but honest. No markdown headers. No hype.
+    `.trim();
+
+    const response = await llm.invoke(aiPrompt);
+
+    return res.status(200).json({
+      aiSuggestion: response.content,
+      recommendedMentors: relevantMentors,
+      totalFound: relevantMentors.length,
+    });
+  } catch (error) {
+    console.error("❌ Error in SuggestFromAi:", error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
 };
-
-import Conversation from "../models/conversationModel.js";
-import Message from "../models/messageModel.js";
-import Course from "../models/course.js";
-// import User from "../models/userModel.js"; // mentors
 
 export const getChats = async (req, res) => {
   try {
     const { mentorId } = req.params;
-    const studentId = req.user.id; // ✅ from token
+    const studentId = req.user.id;
 
     if (!mentorId || !studentId) {
       return res.status(400).json({ message: "Mentor ID or Student ID missing" });
     }
 
-    // ✅ Check if conversation exists between student & mentor
     let conversation = await Conversation.findOne({
       participants: { $all: [mentorId, studentId] },
     });
-    console.log("the converstaion of the user ", conversation);
-    
 
-    // ✅ Create if not exist
     if (!conversation) {
-      console.log("the ew concverstation");
-      
       conversation = await Conversation.create({
         participants: [studentId, mentorId],
       });
     }
 
-    // ✅ Fetch messages
-    const messages = await Message.find({ conversationId: conversation._id })
-console.log("rge messages between them", messages);
+    const messages = await Message.find({ conversationId: conversation._id });
 
-    // ✅ Fetch mentor info
     const mentor = await User.findById(mentorId).select("name profilePicture");
 
-    // ✅ Format response
     const formattedMessages = messages.map((msg) => ({
       _id: msg._id,
       text: msg.text,
@@ -263,30 +260,25 @@ export const recentChats = async (req, res) => {
       return res.status(400).json({ message: "Student ID missing" });
     }
 
-    // 1️⃣ Get all conversations for student
     const conversations = await Conversation.find({
       participants: studentId,
     });
 
-    const mentorMap = new Map(); // mentorId -> { mentor, latestMessage }
+    const mentorMap = new Map();
 
     for (const convo of conversations) {
-      // 2️⃣ Identify mentor
       const mentorId = convo.participants.find(
         (id) => id.toString() !== studentId.toString()
       );
 
       if (!mentorId) continue;
 
-      // 3️⃣ Get latest message for THIS conversation
       const message = await Message.findOne({ conversationId: convo._id })
         .sort({ createdAt: -1 })
         .lean();
 
-      // If no message, skip (or keep empty based on preference)
       if (!message) continue;
 
-      // 4️⃣ If mentor already exists, keep the most recent message
       const existing = mentorMap.get(mentorId.toString());
 
       if (
@@ -300,21 +292,16 @@ export const recentChats = async (req, res) => {
       }
     }
 
-    // 5️⃣ Fetch mentor details in bulk
     const mentorIds = [...mentorMap.keys()];
     const mentors = await User.find({ _id: { $in: mentorIds } })
       .select("name profilePicture")
       .lean();
 
-    const mentorInfoMap = new Map(
-      mentors.map((m) => [m._id.toString(), m])
-    );
+    const mentorInfoMap = new Map(mentors.map((m) => [m._id.toString(), m]));
 
-    // 6️⃣ Build final response
     const chats = [...mentorMap.entries()]
       .map(([mentorId, data]) => {
         const mentor = mentorInfoMap.get(mentorId);
-
         return {
           mentor: {
             id: mentorId,
@@ -333,7 +320,6 @@ export const recentChats = async (req, res) => {
           },
         };
       })
-      // 7️⃣ Sort by latest message time
       .sort(
         (a, b) =>
           new Date(b.latestMessage.createdAt) -
@@ -346,15 +332,11 @@ export const recentChats = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
-// routes for the ask From AI Ai suggest the verified mentor to the student based on the student learning profile and the mentor expertise and availability and timezone compatibility and the student can also ask for specific mentor based on the mentor name or expertise and the AI will suggest the best match for the student based on the student learning profile and the mentor expertise and availability and timezone compatibilityalso take input prompt from the user 
-// get all the course that enrolled by User with status is active 
-export const getCourses= async (req, res) => {
+
+export const getCourses = async (req, res) => {
   try {
-    const studentId = req.user.id;
-    const courses = await Course
-  .find({ status: "active" })
-  .populate("mentor", "name email");
-  res.json({ courses });
+    const courses = await Course.find({ status: "active" }).populate("mentor", "name email");
+    res.json({ courses });
   } catch (err) {
     console.error("Error fetching courses:", err);
     res.status(500).json({ message: "Server error", error: err.message });

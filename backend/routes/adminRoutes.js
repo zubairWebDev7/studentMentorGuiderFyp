@@ -1,5 +1,5 @@
 import express from "express";
-import { adminLogin, adminSignup, approvedMentorswithRag, getAllCourses, updateCourseStatus } from "../controllers/adminController.js";
+import { adminLogin, adminSignup, approvedMentorswithRag, deleteMentor, getAllCourses, updateCourseStatus } from "../controllers/adminController.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
 import { adminSignupSchema } from "../validations/adminValidation.js";
 import { adminLoginSchema } from "../validations/adminValidation.js";
@@ -28,7 +28,7 @@ adminRouter.get("/courses", adminVerification, getAllCourses);
 // update the status of course pending to active 
 
 adminRouter.put("/courses/:courseId/", adminVerification,updateCourseStatus);
-
+adminRouter.delete("/mentors/:mentorId", adminVerification, deleteMentor);
 
 export default adminRouter;
                                   

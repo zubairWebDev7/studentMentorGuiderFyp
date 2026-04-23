@@ -1,103 +1,72 @@
-// import fs from "fs";
-// import path from "path";
-// import { FaissStore } from "@langchain/community/vectorstores/faiss";
-// import { OpenAIEmbeddings } from "@langchain/openai";
-
-import { index } from "../config/pinecone.js";
 import { createEmbedding } from "./embeding.js";
 import User from "../models/User.js";
 
-// ... existing code ...
-
-// Function to compute cosine similarity
+// Cosine similarity between two equal-length vectors
 function cosineSimilarity(vecA, vecB) {
-  const dotProduct = vecA.reduce((sum, a, i) => sum + a * vecB[i], 0);
-  const normA = Math.sqrt(vecA.reduce((sum, a) => sum + a * a, 0));
-  const normB = Math.sqrt(vecB.reduce((sum, b) => sum + b * b, 0));
-  return dotProduct / (normA * normB);
+  if (!Array.isArray(vecA) || !Array.isArray(vecB)) return 0;
+  if (vecA.length !== vecB.length) return 0;
+
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < vecA.length; i++) {
+    dot += vecA[i] * vecB[i];
+    normA += vecA[i] * vecA[i];
+    normB += vecB[i] * vecB[i];
+  }
+  if (normA === 0 || normB === 0) return 0;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
+/**
+ * Find top-K mentors most similar to the query text.
+ * Returns mentor objects with a `similarity` score attached,
+ * sorted by similarity descending. Embedding field is stripped
+ * before returning so the response stays lean.
+ */
 export const findSimilarMentors = async (queryText, topK = 5) => {
-  const queryEmbedding = await createEmbedding(queryText);
+  if (!queryText || !queryText.trim()) {
+    throw new Error("Query text is required");
+  }
 
+  const queryEmbedding = await createEmbedding(queryText);
   if (!queryEmbedding || queryEmbedding.length === 0) {
     throw new Error("Invalid query embedding");
   }
 
-  // Fetch all approved mentors with embeddings
-  const mentors = await User.find({ role: "mentor", approved: true, embedding: { $exists: true, $ne: [] } }).select("name profession experience skillLevel embedding");
+  // Fetch only approved, active mentors that have an embedding
+  const mentors = await User.find({
+    role: "mentor",
+    approved: true,
+    status: "active",
+    embedding: { $exists: true, $ne: [] },
+  }).select("name profession experience skillLevel profilePicture embedding");
 
-  // Compute similarities
-  const similarities = mentors.map(mentor => ({
-    mentor,
-    similarity: cosineSimilarity(queryEmbedding, mentor.embedding)
-  }));
+  if (mentors.length === 0) return [];
 
-  // Sort by similarity descending
-  similarities.sort((a, b) => b.similarity - a.similarity);
+  // Score each mentor
+  const scored = mentors
+    .map((mentor) => {
+      const similarity = cosineSimilarity(queryEmbedding, mentor.embedding);
+      return { mentor, similarity };
+    })
+    // Drop anything with invalid/zero similarity so junk doesn't sneak in
+    .filter((item) => Number.isFinite(item.similarity) && item.similarity > 0);
 
-  // Return top K
-  return similarities.slice(0, topK).map(item => item.mentor);
+  // Sort best match first
+  scored.sort((a, b) => b.similarity - a.similarity);
+
+  // Return top K — strip the heavy embedding array before sending back
+  return scored.slice(0, topK).map(({ mentor, similarity }) => {
+    const obj = mentor.toObject();
+    delete obj.embedding;
+    return { ...obj, similarity };
+  });
 };
 
-// const VECTOR_DIR = path.resolve("mentor_vectors");
-
-// export const embeddings = new OpenAIEmbeddings({
-//   model: "text-embedding-3-small",
-//   apiKey: process.env.OPENAI_API_KEY,
-// });
-
-// // Load or create vector store
-// export async function getVectorStore() {
-//   try {
-//     if (fs.existsSync(VECTOR_DIR)) {
-//       // Check if the directory has valid files
-//       const files = fs.readdirSync(VECTOR_DIR);
-//       if (files.length > 0) {
-//         return await FaissStore.load(VECTOR_DIR, embeddings);
-//       }
-//     }
-//   } catch (error) {
-//     console.warn("⚠️ Could not load existing vector store, creating new one:", error.message);
-//     // If loading fails, delete corrupted directory
-//     if (fs.existsSync(VECTOR_DIR)) {
-//       fs.rmSync(VECTOR_DIR, { recursive: true, force: true });
-//     }
-//   }
-
-//   // Create new empty vector store
-//   return await FaissStore.fromTexts([], [], embeddings);
-// }
-
-// // Save vector store
-// export async function saveVectorStore(store) {
-//   try {
-//     // Check if store has any documents
-//     if (!store.docstore || store.docstore._docs.size === 0) {
-//       console.log("⚠️ Vector store is empty, skipping save");
-//       return;
-//     }
-
-//     await store.save(VECTOR_DIR);
-//     console.log("✅ Vector store saved successfully");
-//   } catch (error) {
-//     console.error("❌ Error saving vector store:", error);
-//     throw error;
-//   }
-// }
-
-// // Delete vector store directory
-// export async function deleteVectorStore() {
-//   try {
-//     if (fs.existsSync(VECTOR_DIR)) {
-//       fs.rmSync(VECTOR_DIR, { recursive: true, force: true });
-//       console.log("✅ Vector store deleted successfully");
-//     }
-//   } catch (error) {
-//     console.error("❌ Error deleting vector store:", error);
-//     throw error;
-//   }
-// }
+/**
+ * Generate and save an embedding for a mentor in MongoDB.
+ */
 export const insertInVectorDb = async (mentorText, mentor) => {
   const embedding = await createEmbedding(mentorText);
 
@@ -105,34 +74,29 @@ export const insertInVectorDb = async (mentorText, mentor) => {
     throw new Error("Invalid embedding generated");
   }
 
-  // Clean the embedding to ensure all values are finite numbers
-  const cleanEmbedding = embedding.filter(v => typeof v === 'number' && isFinite(v));
-
+  const cleanEmbedding = embedding.filter(
+    (v) => typeof v === "number" && isFinite(v)
+  );
   if (cleanEmbedding.length === 0) {
     throw new Error("No valid embedding values after cleaning");
   }
 
-  console.log("Generated embedding:", cleanEmbedding.slice(0, 5), "...");
-
-  // Save embedding to MongoDB
   mentor.embedding = cleanEmbedding;
   await mentor.save();
-  return mentor.embedding;
-
   console.log("✅ Saved mentor embedding to MongoDB:", mentor._id.toString());
+  return mentor.embedding;
 };
+
 export const setEmbeddingNull = async (mentorId) => {
   try {
     const mentor = await User.findById(mentorId);
-    if (!mentor) {
-      throw new Error("Mentor not found");
-    }
-    mentor.embedding = null;
+    if (!mentor) throw new Error("Mentor not found");
+    mentor.embedding = [];
     await mentor.save();
-    console.log("✅ Set mentor embedding to null in MongoDB:", mentor._id.toString());
+    console.log("✅ Cleared mentor embedding:", mentor._id.toString());
     return true;
   } catch (error) {
-    console.error("❌ Error setting mentor embedding to null:", error);
+    console.error("❌ Error clearing mentor embedding:", error);
     return false;
   }
 };
